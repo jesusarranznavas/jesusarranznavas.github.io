@@ -1035,6 +1035,13 @@ class Component extends DCLogic {
   drawBuilding(c, b, ox) {
     var w = this.wd, col = w.col, gy = w.gy, j = b.j, x = b.x + ox;
     c.strokeStyle = col.ink; c.lineWidth = 1.8; c.lineCap = 'round'; c.lineJoin = 'round';
+    if (b.ruined) {
+      c.fillStyle = col.burnt;
+      c.beginPath(); c.moveTo(x - 4, gy); c.lineTo(x + b.w * 0.15, gy - 10 + j[1]); c.lineTo(x + b.w * 0.3, gy - 6); c.lineTo(x + b.w * 0.45, gy - 16 + j[2]); c.lineTo(x + b.w * 0.6, gy - 8); c.lineTo(x + b.w * 0.8, gy - 13 + j[3]); c.lineTo(x + b.w + 4, gy); c.closePath(); c.fill(); c.stroke();
+      if (b.type === 'tower') { c.beginPath(); c.moveTo(x + 4, gy - 8); c.lineTo(x + 4, gy - 30 - j[4] * 4); c.lineTo(x + 12, gy - 22); c.stroke(); }
+      c.beginPath(); c.moveTo(x + b.w * 0.3, gy - 4); c.lineTo(x + b.w * 0.36, gy - 9); c.moveTo(x + b.w * 0.62, gy - 3); c.lineTo(x + b.w * 0.7, gy - 8); c.stroke();
+      return;
+    }
     c.fillStyle = b.burnt ? col.burnt : col.paper;
     var night = w.fx.nightA;
     if (b.type === 'tree') {
@@ -1108,7 +1115,11 @@ class Component extends DCLogic {
     if (fx.snow > 0) fx.snowDepth = Math.min(6, fx.snowDepth + dt * 0.5); else if (fx.snowDepth > 0) fx.snowDepth = Math.max(0, fx.snowDepth - dt * 0.4);
     w.blds.forEach(function (b) {
       b.snow = fx.snowDepth;
-      if (b.fire > 0) { b.fire -= dt * ((fx.rain > 0 || fx.storm > 0 || fx.snow > 0) ? 6 : 1); if (b.fire <= 0) { b.fire = 0; b.burnt = 1; } }
+      if (b.fire > 0) {
+        var wet = (fx.rain > 0 || fx.storm > 0 || fx.snow > 0);
+        b.fire -= dt * (wet ? 6 : 1); if (b.fire <= 0) { b.fire = 0; b.burnt = 1; }
+        if (!wet) { b.spread = (b.spread || 0) + dt; if (b.spread > 5) { b.spread = 0; var nb = null, bd = 1e9; w.blds.forEach(function (o) { if (o !== b && !o.fire && !o.burnt && !o.ruined && o.type !== 'lamp') { var dd = Math.abs((o.x + o.w / 2) - (b.x + b.w / 2)); if (dd < bd) { bd = dd; nb = o; } } }); if (nb && bd < 170) nb.fire = 22; } }
+      }
       if (b.hit > 0) b.hit -= dt;
     });
     c.setTransform(w.dpr, 0, 0, w.dpr, 0, 0);
@@ -1147,8 +1158,11 @@ class Component extends DCLogic {
       self.drawBuilding(c, b, ox);
       c.restore();
       if (b.fire > 0) {
-        var n = Math.max(2, Math.round(b.w / 16)), s = Math.min(1.4, 0.6 + b.fire / 12);
-        for (var fi = 0; fi < n; fi++) self.flame(c, b.x + 8 + fi * (b.w - 16) / Math.max(1, n - 1), gy - (b.type === 'tree' ? b.h * 0.6 : b.h) + 4, s, w.t + fi);
+        var n = Math.max(2, Math.round(b.w / 14)), s = Math.min(1.9, 0.8 + b.fire / 10);
+        var topY = gy - (b.type === 'tree' ? b.h * 0.6 : b.h) + 4;
+        for (var fi = 0; fi < n; fi++) self.flame(c, b.x + 6 + fi * (b.w - 12) / Math.max(1, n - 1), topY, s * (0.85 + 0.3 * Math.sin(w.t * 3 + fi)), w.t + fi);
+        if (b.type === 'tower' || b.type === 'house' || b.type === 'shop') { for (var ry = topY + 30; ry < gy - 8; ry += 34) self.flame(c, b.x + b.w * (0.3 + 0.4 * ((ry * 7) % 3) / 2), ry, s * 0.6, w.t + ry); }
+        if (Math.random() < 0.5) w.parts.push({ k: 'spark', x: b.x + Math.random() * b.w, y: topY - 10, vx: (Math.random() - 0.3) * 40, vy: -90 - Math.random() * 80, life: 0.9, r: 2 });
         if (Math.random() < 0.35) w.parts.push({ k: 'smoke', x: b.x + Math.random() * b.w, y: gy - b.h - 10, vx: 6 + Math.random() * 10, vy: -26 - Math.random() * 18, life: 3, r: 4 + Math.random() * 4 });
       }
     });
@@ -1193,11 +1207,13 @@ class Component extends DCLogic {
       for (var ti = 0; ti < 3; ti++) w.parts.push({ k: 'spark', x: mx + (Math.random() - 0.5) * 10, y: my + (Math.random() - 0.5) * 10, vx: (m.sx - m.tx) * 0.15 * Math.random(), vy: -(gy - m.sy) * 0.12 * Math.random(), life: 0.5 + Math.random() * 0.4, r: 2 + Math.random() * 3 });
       c.save(); c.strokeStyle = col.ink; c.lineWidth = 2; c.fillStyle = col.pencil;
       var ang = Math.atan2(gy - m.sy, m.tx - m.sx);
-      c.globalAlpha = 0.9; c.fillStyle = col.fire; c.beginPath(); c.moveTo(mx + Math.sin(ang) * 14, my - Math.cos(ang) * 14); c.lineTo(mx - Math.cos(ang) * 90, my - Math.sin(ang) * 90); c.lineTo(mx - Math.sin(ang) * 14, my + Math.cos(ang) * 14); c.closePath(); c.fill();
-      c.globalAlpha = 1; c.fillStyle = col.pencil; c.beginPath(); c.arc(mx, my, 13, 0, 6.283); c.fill(); c.stroke();
-      c.beginPath(); c.arc(mx - 4, my - 3, 3, 0, 6.283); c.arc(mx + 4, my + 4, 2, 0, 6.283); c.stroke();
+      var R0 = m.giant ? 78 : 13, TL = m.giant ? 380 : 90;
+      if (m.giant) { c.save(); c.globalAlpha = 0.18 + k * 0.25; c.fillStyle = '#000'; c.beginPath(); c.ellipse(m.tx, gy + 2, 40 + k * 260, 6 + k * 14, 0, 0, 6.283); c.fill(); c.restore(); for (var gi = 0; gi < 6; gi++) w.parts.push({ k: 'spark', x: mx + (Math.random() - 0.5) * 120, y: my + (Math.random() - 0.5) * 120, vx: (Math.random() - 0.5) * 80, vy: -40, life: 0.8, r: 4 + Math.random() * 4 }); }
+      c.globalAlpha = 0.9; c.fillStyle = col.fire; c.beginPath(); c.moveTo(mx + Math.sin(ang) * R0, my - Math.cos(ang) * R0); c.lineTo(mx - Math.cos(ang) * TL, my - Math.sin(ang) * TL); c.lineTo(mx - Math.sin(ang) * R0, my + Math.cos(ang) * R0); c.closePath(); c.fill();
+      c.globalAlpha = 1; c.fillStyle = col.pencil; c.lineWidth = m.giant ? 3 : 2; c.beginPath(); c.arc(mx, my, R0, 0, 6.283); c.fill(); c.stroke();
+      var cr = R0 / 13; c.beginPath(); c.arc(mx - 4 * cr, my - 3 * cr, 3 * cr, 0, 6.283); c.arc(mx + 4 * cr, my + 4 * cr, 2 * cr, 0, 6.283); c.stroke();
       c.restore();
-      if (k >= 1) { self.impact(m.tx); return false; }
+      if (k >= 1) { if (m.giant) self.megaImpact(m.tx); else self.impact(m.tx); return false; }
       return true;
     });
     // bolts
@@ -1262,8 +1278,24 @@ class Component extends DCLogic {
     });
     if (w.parts.length > 1400) w.parts.splice(0, w.parts.length - 1400);
     // shockwaves
-    w.rings = w.rings.filter(function (r) { r.t += dt; if (r.t > 0.7) return false; c.save(); c.strokeStyle = col.ink; c.globalAlpha = 1 - r.t / 0.7; c.lineWidth = 2; c.beginPath(); c.ellipse(r.x, gy, 20 + r.t * 420, 6 + r.t * 70, 0, Math.PI, 0); c.stroke(); c.restore(); return true; });
+    w.rings = w.rings.filter(function (r) { var life = r.big ? 1.3 : 0.7, sc = r.big ? 3.2 : 1; r.t += dt; if (r.t > life) return false; c.save(); c.strokeStyle = col.ink; c.globalAlpha = 1 - r.t / life; c.lineWidth = r.big ? 3 : 2; c.beginPath(); c.ellipse(r.x, gy, 20 + r.t * 420 * sc, 6 + r.t * 70 * sc, 0, Math.PI, 0); c.stroke(); c.restore(); return true; });
     if (fx.flash > 0) { c.fillStyle = 'rgba(255,250,235,' + Math.min(0.75, fx.flash * 3) + ')'; c.fillRect(0, 0, W, H); }
+  }
+  ppl_panic(kind) {
+    var w = this.wd, self = this;
+    setTimeout(function () { if (!self.wd) return; w.ppl.forEach(function (p) { if (p.st === 'walk' || p.st === 'idle') { self.setSt(p, 'look', 2.4); p.look = w.W / 2; if (Math.random() < 0.6) self.say(p, ['is that…', 'oh no', 'RUN', 'mom?', 'well, bye'][Math.floor(Math.random() * 5)], 2.4); } }); }, 600);
+  }
+  megaImpact(x) {
+    var w = this.wd, self = this, gy = w.gy;
+    w.fx.flash = 1.1; w.fx.quake = 3.2; w.fx.rain = 0; w.fx.snow = 0;
+    for (var r = 0; r < 4; r++) (function (r) { setTimeout(function () { if (self.wd) self.wd.rings.push({ x: x, t: 0, big: 1 }); }, r * 160); })(r);
+    w.craters = [{ x: x, r: Math.min(260, w.W * 0.18) }];
+    for (var i = 0; i < 160; i++) w.parts.push({ k: i % 3 ? 'debris' : 'spark', x: x + (Math.random() - 0.5) * 80, y: gy - 6, vx: (Math.random() - 0.5) * 1400, vy: -300 - Math.random() * 700, life: 1.6 + Math.random() * 1.4, r: 2 + Math.random() * 5 });
+    w.blds.forEach(function (b) { b.ruined = 1; b.fire = Math.random() < 0.55 ? 10 + Math.random() * 12 : 0; b.snow = 0; });
+    w.ppl.forEach(function (p) { if (p.st === 'gone' || p.st === 'abduct') return; var d = p.x - x || 1; p.st = 'fly'; p.vx = (d > 0 ? 1 : -1) * (500 + Math.random() * 500); p.vy = -500 - Math.random() * 500; p.air = -2; p.dir = d > 0 ? 1 : -1; self.say(p, ['AAAAH', 'nooo', 'why', '!!!'][Math.floor(Math.random() * 4)], 1.6); });
+    w.held = null;
+    this.shake(); var q = setInterval(function () { self.shake(); }, 650); setTimeout(function () { clearInterval(q); }, 3000);
+    setTimeout(function () { if (!self.wd) return; self.wd.ppl.forEach(function (p, i) { if (i % 2 === 0) self.say(p, ['…', 'my house…', 'was that necessary?', "type 'heal'", 'ok who did this'][Math.floor(Math.random() * 5)], 3); }); }, 4200);
   }
   impact(x) {
     var w = this.wd, self = this, gy = w.gy;
@@ -1299,11 +1331,23 @@ class Component extends DCLogic {
     if (cmd === 'snow') { fx.snow = 18; fx.rain = 0; return ['let it snow…']; }
     if (cmd === 'storm') { fx.storm = 14; fx.rain = 0; return ['a storm is brewing. hide your kids.']; }
     if (cmd === 'meteor') {
-      var n = Math.min(5, Math.max(1, parseInt(arg, 10) || 1));
-      for (var i = 0; i < n; i++) { var tx = 60 + Math.random() * (W - 120); w.meteors.push({ sx: tx + 500 + Math.random() * 300, sy: -80 - i * 140, tx: tx, t: -i * 0.5, dur: 1.5 }); }
-      return [n > 1 ? '' + n + ' meteors incoming!' : 'meteor incoming!', 'brace for impact…'];
+      var n = Math.max(1, parseInt(arg, 10) || 1);
+      if (n > 10) {
+        w.meteors.push({ giant: true, sx: W * 0.5 + 700, sy: -520, tx: W * 0.5, t: 0, dur: 3.2 });
+        this.ppl_panic('giant');
+        return ['WARNING: ' + n + ' meteors is too many.', 'sending ONE BIG ONE instead…', "(type 'heal' afterwards. they will need it)"];
+      }
+      for (var i = 0; i < n; i++) { var tx = 60 + Math.random() * (W - 120); w.meteors.push({ sx: tx + 500 + Math.random() * 300, sy: -80 - (i % 4) * 140, tx: tx, t: -i * 0.35, dur: 1.5 }); }
+      return [n > 1 ? n + ' meteors incoming!' : 'meteor incoming!', n > 1 ? 'brace for impact… (max 10, after that things get ugly)' : 'brace for impact…'];
     }
-    if (cmd === 'fire') { var cand = w.blds.filter(function (b) { return b.type !== 'lamp' && !b.fire; }); if (!cand.length) return ['everything is already on fire. calm down.']; cand[Math.floor(Math.random() * cand.length)].fire = 20; return ['something caught fire.', "tip: 'rain' puts it out."]; }
+    if (cmd === 'fire') {
+      var cand = w.blds.filter(function (b) { return b.type !== 'lamp' && !b.fire && !b.ruined; });
+      if (!cand.length) return ['everything is already on fire. calm down.'];
+      var nf = arg === 'all' ? cand.length : Math.min(cand.length, Math.max(1, parseInt(arg, 10) || 1));
+      cand.sort(function (a, b) { return Math.abs(a.x - W / 2) - Math.abs(b.x - W / 2) + (Math.random() - 0.5) * 400; });
+      for (var fi = 0; fi < nf; fi++) { cand[fi].fire = 26; cand[fi].spread = 0; cand[fi].burnt = 0; }
+      return [nf > 1 ? nf + ' buildings caught fire!' : 'something caught fire!', "it spreads… 'rain' puts it out, 'heal' fixes everything."];
+    }
     if (cmd === 'quake' || cmd === 'earthquake') { fx.quake = 3.5; this.shake(); var r = this.root; var q = setInterval(function () { self.shake(); }, 650); setTimeout(function () { clearInterval(q); }, 3300); return ['the ground is shaking!']; }
     if (cmd === 'tornado') { var fromL = Math.random() < 0.5; w.tornado = { x: fromL ? -80 : W + 80, v: fromL ? 120 : -120, t: 0 }; return ['tornado warning!']; }
     if (cmd === 'ufo' || cmd === 'aliens') { if (w.ufo) return ['they are already here.']; var vic = people.length ? people[Math.floor(Math.random() * people.length)] : null; w.ufo = { x: -80, y: gy - 210, tx: vic ? vic.x : W / 2, phase: 'in', t: 0, victim: vic }; return ['unidentified object approaching…']; }
@@ -1318,7 +1362,7 @@ class Component extends DCLogic {
       Object.keys(fx).forEach(function (k) { if (k !== 'nightA') fx[k] = 0; });
       w.meteors = []; w.bolts = []; w.tornado = null; w.ufo = null; w.craters = []; w.fws = []; w.held = null;
       w.parts = w.parts.filter(function (p) { return p.k === 'smoke'; });
-      w.blds.forEach(function (b) { b.fire = 0; b.burnt = 0; b.snow = 0; b.j[0] = (Math.random() - 0.5) * 1.6; });
+      w.blds.forEach(function (b) { b.fire = 0; b.burnt = 0; b.snow = 0; b.ruined = 0; b.spread = 0; b.j[0] = (Math.random() - 0.5) * 1.6; });
       w.ppl.forEach(function (p) { if (p.st === 'gone' || p.st === 'abduct') { p.st = 'fly'; p.air = -(gy - 40); p.vx = 0; p.vy = 0; } else if (p.st !== 'fly') { p.st = 'walk'; p.stT = 3; } p.umb = 0; if (Math.random() < 0.5) self.say(p, ['phew', 'thanks!', 'finally'][Math.floor(Math.random() * 3)]); });
       return ['the city has been restored.'];
     }
@@ -1488,7 +1532,7 @@ class Component extends DCLogic {
     } else if (c === 'god') {
       out = [L('god mode: the little city at the bottom is yours.', 'tl-acc'),
         L('  weather   rain · snow · storm · sun · rainbow · night · day'),
-        L('  chaos     meteor [n] · fire · quake · tornado · ufo'),
+        L('  chaos     meteor [n] · fire [n|all] · quake · tornado · ufo'),
         L('  fun       fireworks · dance · spawn [n]'),
         L('  undo      heal (restores everything)'),
         L("try: 'meteor 3', then 'heal'. be nice to them.", 'tl-ok')];
