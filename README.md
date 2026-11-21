@@ -1,15 +1,29 @@
-# Portfolio — Jesús Arranz Navas
+# Jesús Arranz Navas — portfolio
 
-Web estática (un solo `index.html` + carpeta `assets/`). No necesita compilar nada.
+**🔗 [jesusarranznavas.github.io](https://jesusarranznavas.github.io)**
 
-## Publicar en GitHub Pages
-1. Crea un repositorio llamado **`jesusarranznavas.github.io`** (así la web queda en `https://jesusarranznavas.github.io`).
-2. Sube el contenido de esta carpeta (`index.html`, `assets/`, este README) a la rama `main`.
-3. En el repo: **Settings → Pages → Build and deployment → Source: "Deploy from a branch"**, rama `main`, carpeta `/ (root)` → Save.
-4. En 1–2 minutos estará en línea. Comprueba el enlace compartiéndolo en LinkedIn (debería salir la imagen `assets/og.png`).
+Hi, I'm Jesús, a computer engineer from Madrid currently doing a Master's in Artificial Intelligence. I like building things, from websites to AI models and everything in between. This repo is my personal portfolio, designed as an engineer's notebook.
 
-## Cambiar cosas rápidas
-- **Imagen al compartir:** sustituye `assets/og.png` (1200×630).
+## What you'll find
 
-## Probar en local
-Abre una terminal en esta carpeta y ejecuta `python -m http.server 8000`, luego entra en http://localhost:8000
+- **About:** who I am, how I work and the skills I use.
+- **Work:** selected projects.
+  - **Moonark Records:** website for an independent record label ([moonarkrecs.com](https://moonarkrecs.com/)).
+  - **AI or human? (TFG):** my final degree project, a tool that listens to a song and estimates how much of it is human-made, AI-generated or AI-modified. It runs 100% locally. The site has a full case study.
+  - **Baker's Agony:** a game I helped develop ([Steam](https://store.steampowered.com/app/3186760/Bakers_Agony/)).
+- **Background:** education, certifications (AZ-900) and experience.
+- **Contact:** email, LinkedIn and GitHub.
+
+The site is available in English and Spanish, and has a paper mode and a chalkboard mode.
+
+## Little extras
+
+There's a terminal hidden in the site. Type `help` to see what it can do, including a few commands to play with the city at the bottom of the page. Some other things are left for you to find. 🙂
+
+## Tech
+
+A single static `index.html` plus an `assets/` folder, built with React and plain CSS, with canvas animations and no build step. It's hosted on GitHub Pages.
+
+---
+
+**Español:** este es mi portfolio personal como ingeniero informático. Puedes verlo en [jesusarranznavas.github.io](https://jesusarranznavas.github.io), en inglés o en español.
